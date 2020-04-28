@@ -36,13 +36,16 @@ class Astar(ob.Planner):
         approxdif = 1e6
         # step = 1
         actual_dist_to_start = 0
+        start_state = pdef.getStartState(0)
         n = 8
+        #tab_of_states = []
+        #for i in range(0, n):
+        #    tab_of_states.append(si.allocState())
         while not ptc():
             # print("step = ", step)
             tab_of_states = []
-            min_dist_to_goal = 1000
-            min_dist_to_start = 1000
-            start_state = pdef.getStartState(0)
+            min_dist_to_goal = math.inf
+            min_dist_to_start = math.inf
             rstate = si.allocState()
             for i in range(0, n):
                 tab_of_states.append(si.allocState())
@@ -56,15 +59,11 @@ class Astar(ob.Planner):
             tab_of_states[5][0], tab_of_states[5][1] = int(x_before) + 1, int(y_before) - 1
             tab_of_states[6][0], tab_of_states[6][1] = int(x_before) - 1, int(y_before) + 1
             tab_of_states[7][0], tab_of_states[7][1] = int(x_before) - 1, int(y_before) - 1
-            for i in range(0, n):
-                if not isStateValid(tab_of_states[i]):
-                    tab_of_states[i][0], tab_of_states[i][1] = -99, -99
             for i in range(0, 8):
                 actual_state = tab_of_states[i]
                 g = dist_between_states(actual_state, start_state)
-                h = goal.distanceGoal(actual_state) * goal.distanceGoal(actual_state)
+                h = goal.distanceGoal(actual_state)**2
                 f = g + h
-
                 if not isStateValid(actual_state):
                     f = math.inf
                 # print("g=",g,"h=",h)
@@ -107,7 +106,7 @@ def isStateValid(state):
     x = state[0]
     y = state[1]
     z = state[2]
-    return x * x + y * y > 2
+    return (x-250) * (x-250) + (y-250) * (y-250) > 100*100
     # return 1
 
 
@@ -116,60 +115,51 @@ def dist_between_states(state1, state2):
 
 
 def plan():
+    N = 500
     # create an R^2 state space
     space = ob.RealVectorStateSpace(2)
     # set lower and upper bounds
     bounds = ob.RealVectorBounds(2)
-    bounds.setLow(-10)
-    bounds.setHigh(10)
+    bounds.setLow(0)
+    bounds.setHigh(N)
     space.setBounds(bounds)
     # create a simple setup object
     ss = og.SimpleSetup(space)
     ss.setStateValidityChecker(ob.StateValidityCheckerFn(isStateValid))
     start = ob.State(space)
-
-    start[0] = random.randint(-10, 10)
-    start[1] = random.randint(-10, 10)
-    start()[0] = -9.5
-    start()[1] = -9.5
+    start[0] = random.randint(0, int(N/2))
+    start[1] = random.randint(0, int(N/2))
     goal = ob.State(space)
-    goal()[0] = 10
-    goal()[1] = 10
+    goal[0] = random.randint(int(N/2), N)
+    goal[1] = random.randint(int(N/2), N)
+    print(goal[0],goal[1],start[0],start[1])
     ss.setStartAndGoalStates(start, goal)
     planner = Astar(ss.getSpaceInformation())
     ss.setPlanner(planner)
 
-    result = ss.solve(100.0)
+    result = ss.solve(188000.0)
     if result:
         if result.getStatus() == ob.PlannerStatus.APPROXIMATE_SOLUTION:
             print("Solution is approximate")
-        # try to shorten the path
-        # ss.simplifySolution()
-        # print the simplified path
         matrix = ss.getSolutionPath().printAsMatrix()
         print(matrix)
-        #matrix = matrix.replace("-", "-")
-        #matrix = matrix.replace("\n", " ")
-        #ss.getSolutionPath().print()
-        #dane = []
-        #for linia in matrix:
-        #    linia = linia.replace("\n", "")
-        #    linia = linia.replace("-", "")
-        #    print(linia)
-            #dane.append(tuple(map(float, linia.split(" "))))
         verts = []
         for line in matrix.split("\n"):
             x = []
             for item in line.split():
                 x.append(float(item))
-            verts.append(x)
-        print(verts)
-        fig = plt.figure()
-        plt.plot(verts)
+            if len(x) is not 0:
+                verts.append(list(x))
+        # print(verts)
+        plt.axis([0, N, 0, N])
+        x=[]
+        y=[]
+        for i in range(0, len(verts)):
+            x.append(verts[i][0])
+            y.append(verts[i][1])
+           # plt.plot(verts[i][0], verts[i][1], 'r*-')
+        plt.plot(x, y, 'ro-')
         plt.show()
-        #data = []
-        #print([float(s) for s in re.findall(matrix)])
-        #print(data)
 
 
 if __name__ == "__main__":
