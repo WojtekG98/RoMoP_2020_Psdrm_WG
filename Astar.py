@@ -38,8 +38,8 @@ class Astar(ob.Planner):
         actual_dist_to_start = 0
         start_state = pdef.getStartState(0)
         n = 8
-        #tab_of_states = []
-        #for i in range(0, n):
+        # tab_of_states = []
+        # for i in range(0, n):
         #    tab_of_states.append(si.allocState())
         while not ptc():
             # print("step = ", step)
@@ -64,9 +64,9 @@ class Astar(ob.Planner):
                 g = dist_between_states(actual_state, start_state)
                 h = goal.distanceGoal(actual_state)**2
                 f = g + h
-                if not isStateValid(actual_state):
+                if not si.checkMotion(self.states_[-1], actual_state):# isStateValid(actual_state):
                     f = math.inf
-                # print("g=",g,"h=",h)
+                # print("actual_state:", actual_state[0], actual_state[1], "g=", g, "h=", h, "f=", f)
                 if f < min_dist_to_goal + min_dist_to_start:
                     rstate = actual_state
                     min_dist_to_goal = h
@@ -74,6 +74,7 @@ class Astar(ob.Planner):
             if si.checkMotion(self.states_[-1], rstate):
                 # print("x =".join([''.join(['{:4}'.format(rstate[0])])]),
                 #      ", y =".join([''.join(['{:4}'.format(rstate[1])])]))
+                # print("rstate[0]:", rstate[0], "rstate[1]:", rstate[1])
                 self.states_.append(rstate)
                 sat = goal.isSatisfied(rstate)
                 dist = goal.distanceGoal(rstate)
@@ -107,7 +108,6 @@ def isStateValid(state):
     y = state[1]
     z = state[2]
     return (x-250) * (x-250) + (y-250) * (y-250) > 100*100
-    # return 1
 
 
 def dist_between_states(state1, state2):
@@ -132,7 +132,6 @@ def plan():
     goal = ob.State(space)
     goal[0] = random.randint(int(N/2), N)
     goal[1] = random.randint(int(N/2), N)
-    print(goal[0],goal[1],start[0],start[1])
     ss.setStartAndGoalStates(start, goal)
     planner = Astar(ss.getSpaceInformation())
     ss.setPlanner(planner)

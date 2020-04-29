@@ -1,4 +1,5 @@
 import Astar
+import sys
 from ompl import util as ou
 from ompl import base as ob
 from ompl import geometric as og
@@ -7,42 +8,22 @@ import matplotlib.pyplot as plt
 import random
 
 N = 500.0
-radius = 100
+radius = 150
 center = [250, 250]
 
-class ValidityChecker(ob.StateValidityChecker):
-    # Returns whether the given state's position overlaps the
-    # circular obstacle
-    def isValid(self, state):
-        x = state[0]
-        y = state[1]
-        # if (self.clearance(state) < 0.0):
-        # print("x:",x,", y:",y,",clearance: ",self.clearance(state))
-        return self.clearance(state) > 0.0
 
-    # Returns the distance from the given state's position to the
-    # boundary of the circular obstacle.
-    def clearance(self, state):
-        # Extract the robot's (x,y) position from its state
-        x = state[0]
-        y = state[1]
-        # Distance formula between two points, offset by the circle's
-        # radius
-        return sqrt((x - center[0]) * (x - center[0]) + (y - center[0]) * (y - center[0])) - radius
+def isStateValid(state):
+    x = state[0]
+    y = state[1]
+    return sqrt((x-center[0])**2 +(y-center[1])**2) > radius
 
 
-def getPathLengthObjective(si):
-    return ob.PathLengthOptimizationObjective(si)
-
-
-def getThresholdPathLengthObj(si):
-    obj = ob.PathLengthOptimizationObjective(si)
-    obj.setCostThreshold(ob.Cost(1.51))
-    return obj
 
 
 # Keep these in alphabetical order and all lower case
 def allocatePlanner(si, plannerType):
+    if plannerType.lower() == "astar":
+        return Astar.Astar(si)
     if plannerType.lower() == "bfmtstar":
         return og.BFMT(si)
     elif plannerType.lower() == "bitstar":
@@ -63,110 +44,74 @@ def allocatePlanner(si, plannerType):
         ou.OMPL_ERROR("Planner-type is not implemented in allocation function.")
 
 
-# Keep these in alphabetical order and all lower case
-def allocateObjective(si, objectiveType):
-    if objectiveType.lower() == "pathclearance":
-        return getClearanceObjective(si)
-    elif objectiveType.lower() == "pathlength":
-        return getPathLengthObjective(si)
-    elif objectiveType.lower() == "thresholdpathlength":
-        return getThresholdPathLengthObj(si)
-    elif objectiveType.lower() == "weightedlengthandclearancecombo":
-        return getBalancedObjective1(si)
+def plan(runTime, plannerType, fname, space, start, goal):
+
+    ss = og.SimpleSetup(space)
+
+    ss.setStateValidityChecker(ob.StateValidityCheckerFn(isStateValid))
+
+    # Set the start and goal states
+    ss.setStartAndGoalStates(start, goal)
+
+    # Set the problem instance for our planner to solve
+    ss.setPlanner(allocatePlanner(ss.getSpaceInformation(), plannerType))
+
+    # attempt to solve the planning problem in the given runtime
+    solved = ss.solve(runTime)
+    if solved:
+        return ss.getSolutionPath().printAsMatrix()
+
+        # If a filename was specified, output the path as a matrix to
+        # that file for visualization
+        if fname:
+            with open(fname, 'w') as outFile:
+                outFile.write(ss.getSolutionPath().printAsMatrix())
     else:
-        ou.OMPL_ERROR("Optimization-objective is not implemented in allocation function.")
+        print("No solution found.")
 
+def plot(start, goal, path, style):
+    plt.axis([0, 500, 0, 500])
+    verts = []
+    for line in path.split("\n"):
+        x = []
+        for item in line.split():
+            x.append(float(item))
+        if len(x) is not 0:
+            verts.append(list(x))
+    x = []
+    y = []
+    for i in range(0, len(verts)):
+        x.append(verts[i][0])
+        y.append(verts[i][1])
+    plt.plot(x, y, style)
+    plt.plot(start[0], start[1], 'g*')
+    plt.plot(goal[0], goal[1], 'y*')
 
-def plan(runTime, plannerType, objectiveType, fname):
+if __name__ == '__main__':
     # Construct the robot state space in which we're planning.
     # We're planning in [0,N]x[0,N], a subset of R^2.
     space = ob.RealVectorStateSpace(2)
 
     # Set the bound of space to be in [0,N].
     space.setBounds(0.0, N)
-
-    # Construct a space information instance for this state space
-    si = ob.SpaceInformation(space)
-
-    # Set the object used to check which states in the space are valid
-    validityChecker = ValidityChecker(si)
-    si.setStateValidityChecker(validityChecker)
-
-    si.setup()
-
     # Set our robot's starting state to be random
     start = ob.State(space)
-    start[0] = random.randint(0, 500)
-    start[1] = random.randint(0, 500)
-    while not validityChecker.isValid(start):
-        start[0] = random.randint(0, 500)
-        start[1] = random.randint(0, 500)
+    start[0] = random.randint(0, N/2)
+    start[1] = random.randint(0, N/2)
+    while not isStateValid(start):
+        start[0] = random.randint(0, N/2)
+        start[1] = random.randint(0, N/2)
 
     # Set our robot's goal state to be random
     goal = ob.State(space)
-    goal[0] = random.randint(0, 500)
-    goal[1] = random.randint(0, 500)
-    while not validityChecker.isValid(goal):
-        goal[0] = random.randint(0, 500)
-        goal[1] = random.randint(0, 500)
+    goal[0] = random.randint(N/2, N)
+    goal[1] = random.randint(N/2, N)
+    while not isStateValid(goal):
+        goal[0] = random.randint(N/2, N)
+        goal[1] = random.randint(N/2, N)
+    path = plan(20, 'RRT', 'path.txt', space, start, goal)
+    plot(start, goal, path, 'ro-')
+    path = plan(20, 'Astar', 'path2.txt', space, start, goal)
+    plot(start, goal, path, 'bo-')
 
-    # Create a problem instance
-    pdef = ob.ProblemDefinition(si)
-
-    # Set the start and goal states
-    pdef.setStartAndGoalStates(start, goal)
-
-    # Create the optimization objective specified by our command-line argument.
-    # This helper function is simply a switch statement.
-    pdef.setOptimizationObjective(allocateObjective(si, objectiveType))
-
-    # Construct the optimal planner specified by our command line argument.
-    # This helper function is simply a switch statement.
-    optimizingPlanner = allocatePlanner(si, plannerType)
-
-    # Set the problem instance for our planner to solve
-    optimizingPlanner.setProblemDefinition(pdef)
-    optimizingPlanner.setup()
-
-    # attempt to solve the planning problem in the given runtime
-    solved = optimizingPlanner.solve(runTime)
-
-    if solved:
-        print('{0} found solution of path length {1:.4f} with an optimization ' \
-              'objective value of {2:.4f}'.format( \
-            optimizingPlanner.getName(), \
-            pdef.getSolutionPath().length(), \
-            pdef.getSolutionPath().cost(pdef.getOptimizationObjective()).value()))
-        matrix = pdef.getSolutionPath().printAsMatrix()
-        verts = []
-        for line in matrix.split("\n"):
-            x = []
-            for item in line.split():
-                x.append(float(item))
-            if len(x) is not 0:
-                verts.append(list(x))
-        # print(verts)
-        plt.axis([0, 500, 0, 500])
-        x = []
-        y = []
-        for i in range(0, len(verts)):
-            x.append(verts[i][0])
-            y.append(verts[i][1])
-        # plt.plot(verts[i][0], verts[i][1], 'r*-')
-        plt.plot(x, y, 'ro-')
-        plt.show()
-        # If a filename was specified, output the path as a matrix to
-        # that file for visualization
-        if fname:
-            with open(fname, 'w') as outFile:
-                outFile.write(pdef.getSolutionPath().printAsMatrix())
-    else:
-        print("No solution found.")
-
-
-if __name__ == '__main__':
-    #moduleName = Astar
-    #importlib.import_module(moduleName)
-    #print("OK")
-    #Astar.plan()
-    plan(10, 'RRT', 'PathLength', 'path.txt')
+    plt.show()
