@@ -7,15 +7,16 @@ from math import sqrt
 import matplotlib.pyplot as plt
 import random
 
-N = 500.0
-radius = 150
-center = [250, 250]
+N = 200.0
+radius = 60
+center = [N/2, N/2]
 
 
 def isStateValid(state):
     x = state[0]
     y = state[1]
     return sqrt((x-center[0])**2 +(y-center[1])**2) > radius
+    #return 1
 
 
 
@@ -70,7 +71,7 @@ def plan(runTime, plannerType, fname, space, start, goal):
         print("No solution found.")
 
 def plot(start, goal, path, style):
-    plt.axis([0, 500, 0, 500])
+    plt.axis([0, N, 0, N])
     verts = []
     for line in path.split("\n"):
         x = []
@@ -96,22 +97,24 @@ if __name__ == '__main__':
     space.setBounds(0.0, N)
     # Set our robot's starting state to be random
     start = ob.State(space)
-    start[0] = random.randint(0, N/2)
-    start[1] = random.randint(0, N/2)
+    start[0] = 0 # random.randint(0, N/2)
+    start[1] = 0 #random.randint(0, N/2)
     while not isStateValid(start):
         start[0] = random.randint(0, N/2)
         start[1] = random.randint(0, N/2)
 
     # Set our robot's goal state to be random
     goal = ob.State(space)
-    goal[0] = random.randint(N/2, N)
-    goal[1] = random.randint(N/2, N)
+    goal[0] = N#random.randint(N/2, N)
+    goal[1] = N#random.randint(N/2, N)
     while not isStateValid(goal):
         goal[0] = random.randint(N/2, N)
         goal[1] = random.randint(N/2, N)
-    path = plan(20, 'RRT', 'path.txt', space, start, goal)
+    path = plan(5, 'RRT', 'path.txt', space, start, goal)
     plot(start, goal, path, 'ro-')
-    path = plan(20, 'Astar', 'path2.txt', space, start, goal)
-    plot(start, goal, path, 'bo-')
-
+    path = plan(600, 'Astar', 'path2.txt', space, start, goal)
+    if path:
+        plot(start, goal, path, 'bo-')
+    circle1 = plt.Circle(center, radius, color='k')
+    plt.gcf().gca().add_artist(circle1)
     plt.show()

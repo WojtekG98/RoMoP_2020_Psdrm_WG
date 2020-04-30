@@ -16,6 +16,24 @@ except ImportError:
     from ompl import geometric as og
 
 
+class Node():
+    """A node class for A* pathfinding"""
+
+    def __init__(self, parent=None, position=None):
+        self.parent = parent
+        self.position = position
+
+        self.g = 0
+        self.h = 0
+        self.f = 0
+
+    def __eq__(self, other):
+        return self.position[0] == other.position[0] and self.position[1] == other.position[1]
+
+    def __str__(self):
+        return str(self.position[0]) + ", " + str(self.position[1]) + ", " + str(self.f)
+
+
 class Astar(ob.Planner):
     def __init__(self, si):
         super(Astar, self).__init__(si, "Astar")
@@ -34,57 +52,64 @@ class Astar(ob.Planner):
         solution = None
         approxsol = 0
         approxdif = 1e6
-        # step = 1
-        actual_dist_to_start = 0
         start_state = pdef.getStartState(0)
-        n = 8
-        # tab_of_states = []
-        # for i in range(0, n):
-        #    tab_of_states.append(si.allocState())
-        while not ptc():
-            # print("step = ", step)
-            tab_of_states = []
-            min_dist_to_goal = math.inf
-            min_dist_to_start = math.inf
-            rstate = si.allocState()
-            for i in range(0, n):
-                tab_of_states.append(si.allocState())
-            x_before = self.states_[-1][0]
-            y_before = self.states_[-1][1]
-            tab_of_states[0][0], tab_of_states[0][1] = int(x_before) + 1, int(y_before)
-            tab_of_states[1][0], tab_of_states[1][1] = int(x_before) - 1, int(y_before)
-            tab_of_states[2][0], tab_of_states[2][1] = int(x_before), int(y_before) + 1
-            tab_of_states[3][0], tab_of_states[3][1] = int(x_before), int(y_before) - 1
-            tab_of_states[4][0], tab_of_states[4][1] = int(x_before) + 1, int(y_before) + 1
-            tab_of_states[5][0], tab_of_states[5][1] = int(x_before) + 1, int(y_before) - 1
-            tab_of_states[6][0], tab_of_states[6][1] = int(x_before) - 1, int(y_before) + 1
-            tab_of_states[7][0], tab_of_states[7][1] = int(x_before) - 1, int(y_before) - 1
-            for i in range(0, 8):
-                actual_state = tab_of_states[i]
-                g = dist_between_states(actual_state, start_state)
-                h = goal.distanceGoal(actual_state)**2
-                f = g + h
-                if not si.checkMotion(self.states_[-1], actual_state):# isStateValid(actual_state):
-                    f = math.inf
-                # print("actual_state:", actual_state[0], actual_state[1], "g=", g, "h=", h, "f=", f)
-                if f < min_dist_to_goal + min_dist_to_start:
-                    rstate = actual_state
-                    min_dist_to_goal = h
-                    min_dist_to_start = g
-            if si.checkMotion(self.states_[-1], rstate):
-                # print("x =".join([''.join(['{:4}'.format(rstate[0])])]),
-                #      ", y =".join([''.join(['{:4}'.format(rstate[1])])]))
-                # print("rstate[0]:", rstate[0], "rstate[1]:", rstate[1])
-                self.states_.append(rstate)
-                sat = goal.isSatisfied(rstate)
-                dist = goal.distanceGoal(rstate)
-                if sat:
-                    approxdif = dist
-                    solution = len(self.states_)
-                    break
-                if dist < approxdif:
-                    approxdif = dist
-                    approxsol = len(self.states_)
+        goal_state = goal.getState()
+        start_node = Node(None, start_state)
+        start_node.g = start_state.h = start_node.f = 0
+        end_node = Node(None, goal_state)
+        end_node.g = end_node.h = end_node.f = 0
+
+        open_list = []
+        closed_list = []
+
+        adjacent_squares = ((0, -1), (0, 1), (-1, 0), (1, 0), (-1, -1), (-1, 1), (1, -1), (1, 1))
+
+        open_list.append(start_node)
+        while len(open_list) > 0 and not ptc():
+            current_node = open_list[0]
+            current_index = 0
+            for index, item in enumerate(open_list):
+                if item.f < current_node.f:
+                    current_node = item
+                    current_index = index
+
+            if current_node == end_node:    # if we hit the goal
+                current = current_node
+                path = []
+                while current is not None:
+                    path.append(current.position)
+                    current = current.parent
+                for i in range(1, len(path)):
+                    self.states_.append(path[len(path) - i - 1])
+                solution = len(self.states_)
+                break
+            open_list.pop(current_index)
+            closed_list.append(current_node)
+
+            children = []
+            for new_position in adjacent_squares:
+                node_position = si.allocState()
+                node_position[0], node_position[1] = current_node.position[0] + new_position[0], current_node.position[
+                    1] + new_position[1]
+
+                if not si.checkMotion(current_node.position, node_position):
+                    continue
+
+                if not si.satisfiesBounds(node_position):
+                    continue
+
+                new_node = Node(current_node, node_position)
+                children.append(new_node)
+
+            for child in children:
+                if child in closed_list:
+                    continue
+                child.g = current_node.g + 1 #si.distance(child.position, current_node.position)
+                child.h = goal.distanceGoal(child.position)
+                child.f = child.g + child.h
+                if len([i for i in open_list if child == i and child.g >= i.g]) > 0:
+                    continue
+                open_list.append(child)
         solved = False
         approximate = False
         if not solution:
@@ -107,7 +132,7 @@ def isStateValid(state):
     x = state[0]
     y = state[1]
     z = state[2]
-    return (x-250) * (x-250) + (y-250) * (y-250) > 100*100
+    return (x - 250) * (x - 250) + (y - 250) * (y - 250) > 100 * 100
 
 
 def dist_between_states(state1, state2):
@@ -115,7 +140,7 @@ def dist_between_states(state1, state2):
 
 
 def plan():
-    N = 500
+    N = 10
     # create an R^2 state space
     space = ob.RealVectorStateSpace(2)
     # set lower and upper bounds
@@ -127,16 +152,16 @@ def plan():
     ss = og.SimpleSetup(space)
     ss.setStateValidityChecker(ob.StateValidityCheckerFn(isStateValid))
     start = ob.State(space)
-    start[0] = random.randint(0, int(N/2))
-    start[1] = random.randint(0, int(N/2))
+    start[0] = 0  # random.randint(0, int(N / 2))
+    start[1] = 0  # random.randint(0, int(N / 2))
     goal = ob.State(space)
-    goal[0] = random.randint(int(N/2), N)
-    goal[1] = random.randint(int(N/2), N)
+    goal[0] = N  # random.randint(int(N / 2), N)
+    goal[1] = N  # random.randint(int(N / 2), N)
     ss.setStartAndGoalStates(start, goal)
     planner = Astar(ss.getSpaceInformation())
     ss.setPlanner(planner)
 
-    result = ss.solve(188000.0)
+    result = ss.solve(.01)
     if result:
         if result.getStatus() == ob.PlannerStatus.APPROXIMATE_SOLUTION:
             print("Solution is approximate")
@@ -151,12 +176,12 @@ def plan():
                 verts.append(list(x))
         # print(verts)
         plt.axis([0, N, 0, N])
-        x=[]
-        y=[]
+        x = []
+        y = []
         for i in range(0, len(verts)):
             x.append(verts[i][0])
             y.append(verts[i][1])
-           # plt.plot(verts[i][0], verts[i][1], 'r*-')
+        # plt.plot(verts[i][0], verts[i][1], 'r*-')
         plt.plot(x, y, 'ro-')
         plt.show()
 
