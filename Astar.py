@@ -3,6 +3,7 @@
 import math
 import random
 import matplotlib.pyplot as plt
+import heapq
 
 try:
     from ompl import base as ob
@@ -33,6 +34,12 @@ class Node():
     def __str__(self):
         return str(self.position[0]) + ", " + str(self.position[1]) + ", " + str(self.f)
 
+    def __lt__(self, other):
+        return self.f < other.f
+
+    def __gt__(self, other):
+        return self.f > other.f
+
 
 class Astar(ob.Planner):
     def __init__(self, si):
@@ -61,19 +68,21 @@ class Astar(ob.Planner):
 
         open_list = []
         closed_list = []
-
+        heapq.heapify(open_list)
         adjacent_squares = ((0, -1), (0, 1), (-1, 0), (1, 0), (-1, -1), (-1, 1), (1, -1), (1, 1))
 
-        open_list.append(start_node)
+        # open_list.append(start_node)
+        heapq.heappush(open_list, start_node)
         while len(open_list) > 0 and not ptc():
-            current_node = open_list[0]
-            current_index = 0
-            for index, item in enumerate(open_list):
-                if item.f < current_node.f:
-                    current_node = item
-                    current_index = index
+            # current_node = open_list[0]
+            # current_index = 0
+            # for index, item in enumerate(open_list):
+            #    if item.f < current_node.f:
+            #        current_node = item
+            #        current_index = index
+            current_node = heapq.heappop(open_list)
 
-            if current_node == end_node:    # if we hit the goal
+            if current_node == end_node:  # if we hit the goal
                 current = current_node
                 path = []
                 while current is not None:
@@ -83,7 +92,7 @@ class Astar(ob.Planner):
                     self.states_.append(path[len(path) - i - 1])
                 solution = len(self.states_)
                 break
-            open_list.pop(current_index)
+            # open_list.pop(current_index)
             closed_list.append(current_node)
 
             children = []
@@ -104,12 +113,13 @@ class Astar(ob.Planner):
             for child in children:
                 if child in closed_list:
                     continue
-                child.g = current_node.g + 1 #si.distance(child.position, current_node.position)
+                child.g = current_node.g + 1#si.distance(child.position, current_node.position)
                 child.h = goal.distanceGoal(child.position)
                 child.f = child.g + child.h
                 if len([i for i in open_list if child == i and child.g >= i.g]) > 0:
                     continue
-                open_list.append(child)
+                heapq.heappush(open_list, child)
+                # open_list.append(child)
         solved = False
         approximate = False
         if not solution:

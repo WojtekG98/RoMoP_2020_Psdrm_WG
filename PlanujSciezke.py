@@ -7,25 +7,22 @@ from math import sqrt
 import matplotlib.pyplot as plt
 import random
 
-N = 200.0
-radius = 60
-center = [N/2, N/2]
+N = 100.0
+radius = N / 5
+center = [N / 2, N / 2]
 
 
 def isStateValid(state):
     x = state[0]
     y = state[1]
-    return sqrt((x-center[0])**2 +(y-center[1])**2) > radius
-    #return 1
-
-
+    return sqrt((x - center[0]) ** 2 + (y - center[1]) ** 2) > radius
 
 
 # Keep these in alphabetical order and all lower case
 def allocatePlanner(si, plannerType):
     if plannerType.lower() == "astar":
         return Astar.Astar(si)
-    if plannerType.lower() == "bfmtstar":
+    elif plannerType.lower() == "bfmtstar":
         return og.BFMT(si)
     elif plannerType.lower() == "bitstar":
         return og.BITstar(si)
@@ -46,7 +43,6 @@ def allocatePlanner(si, plannerType):
 
 
 def plan(runTime, plannerType, fname, space, start, goal):
-
     ss = og.SimpleSetup(space)
 
     ss.setStateValidityChecker(ob.StateValidityCheckerFn(isStateValid))
@@ -60,17 +56,17 @@ def plan(runTime, plannerType, fname, space, start, goal):
     # attempt to solve the planning problem in the given runtime
     solved = ss.solve(runTime)
     if solved:
-        return ss.getSolutionPath().printAsMatrix()
-
         # If a filename was specified, output the path as a matrix to
         # that file for visualization
         if fname:
             with open(fname, 'w') as outFile:
                 outFile.write(ss.getSolutionPath().printAsMatrix())
+        return ss.getSolutionPath().printAsMatrix()
     else:
         print("No solution found.")
 
-def plot(start, goal, path, style):
+
+def plot_path(path, style):
     plt.axis([0, N, 0, N])
     verts = []
     for line in path.split("\n"):
@@ -85,8 +81,7 @@ def plot(start, goal, path, style):
         x.append(verts[i][0])
         y.append(verts[i][1])
     plt.plot(x, y, style)
-    plt.plot(start[0], start[1], 'g*')
-    plt.plot(goal[0], goal[1], 'y*')
+
 
 if __name__ == '__main__':
     # Construct the robot state space in which we're planning.
@@ -95,26 +90,27 @@ if __name__ == '__main__':
 
     # Set the bound of space to be in [0,N].
     space.setBounds(0.0, N)
+
     # Set our robot's starting state to be random
     start = ob.State(space)
-    start[0] = 0 # random.randint(0, N/2)
-    start[1] = 0 #random.randint(0, N/2)
+    start[0], start[1] = random.randint(0, N / 2), random.randint(0, N / 2)
     while not isStateValid(start):
-        start[0] = random.randint(0, N/2)
-        start[1] = random.randint(0, N/2)
+        start[0], start[1] = random.randint(0, N / 2), random.randint(0, N / 2)
 
     # Set our robot's goal state to be random
     goal = ob.State(space)
-    goal[0] = N#random.randint(N/2, N)
-    goal[1] = N#random.randint(N/2, N)
+    goal[0], goal[1] = random.randint(N / 2, N), random.randint(N / 2, N)
+
     while not isStateValid(goal):
-        goal[0] = random.randint(N/2, N)
-        goal[1] = random.randint(N/2, N)
-    path = plan(5, 'RRT', 'path.txt', space, start, goal)
-    plot(start, goal, path, 'ro-')
-    path = plan(600, 'Astar', 'path2.txt', space, start, goal)
-    if path:
-        plot(start, goal, path, 'bo-')
+        goal[0], goal[1] = random.randint(N / 2, N), random.randint(N / 2, N)
+
+    Path = plan(5, 'RRT', 'path.txt', space, start, goal)
+    plot_path(Path, 'ro-')
+    Path = plan(600, 'Astar', 'path2.txt', space, start, goal)
+    if Path:
+        plot_path(Path, 'bo-')
+    plt.plot(start[0], start[1], 'g*')
+    plt.plot(goal[0], goal[1], 'y*')
     circle1 = plt.Circle(center, radius, color='k')
     plt.gcf().gca().add_artist(circle1)
     plt.show()
