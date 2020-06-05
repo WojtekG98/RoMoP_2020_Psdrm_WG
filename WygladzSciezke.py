@@ -53,7 +53,7 @@ if __name__ == '__main__':
     space.setBounds(bounds)
     # Set our robot's starting state to be random
     start = ob.State(space)
-    start[0], start[1] = random.randint(0, N / 2), random.randint(0, N / 2)
+    start[0], start[1] = 10, 10#random.randint(0, N / 2), random.randint(0, N / 2)
     while not sqrt((start[0] - center[0]) ** 2 + (start[1] - center[1]) ** 2) > radius \
             and not \
             sqrt((start[0] - center2[0]) ** 2 + (start[1] - center2[1]) ** 2) > radius2:
@@ -61,7 +61,7 @@ if __name__ == '__main__':
 
     # Set our robot's goal state to be random
     goal = ob.State(space)
-    goal[0], goal[1] = random.randint(N / 2, N), random.randint(N / 2, N)
+    goal[0], goal[1] = 90, 90 #random.randint(N / 2, N), random.randint(N / 2, N)
     while not sqrt((goal[0] - center[0]) ** 2 + (goal[1] - center[1]) ** 2) > radius \
             and not \
             sqrt((goal[0] - center2[0]) ** 2 + (goal[1] - center2[1]) ** 2) > radius2:
@@ -79,5 +79,6 @@ if __name__ == '__main__':
     circle2 = plt.Circle(center2, radius2, color='k')
     plt.gcf().gca().add_artist(circle1)
     plt.gcf().gca().add_artist(circle2)
+    plt.legend(('RRT', 'A*'))
     plt.gca().set_aspect('equal', adjustable='box')
     plt.show()
