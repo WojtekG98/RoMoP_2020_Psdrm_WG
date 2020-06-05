@@ -58,6 +58,7 @@ def plan(runTime, plannerType, fname, space, start, goal):
     if solved:
         # If a filename was specified, output the path as a matrix to
         # that file for visualization
+        # ss.simplifySolution()
         if fname:
             with open(fname, 'w') as outFile:
                 outFile.write(ss.getSolutionPath().printAsMatrix())
@@ -111,6 +112,7 @@ if __name__ == '__main__':
         plot_path(Path, 'bo-')
     plt.plot(start[0], start[1], 'g*')
     plt.plot(goal[0], goal[1], 'y*')
+    plt.legend(('RRT', 'A*'))
     circle1 = plt.Circle(center, radius, color='k')
     plt.gcf().gca().add_artist(circle1)
     plt.show()

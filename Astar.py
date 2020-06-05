@@ -29,7 +29,7 @@ class Node():
         self.f = 0
 
     def __eq__(self, other):
-        return self.position[0] == other.position[0] and self.position[1] == other.position[1]
+        return self.position.getX() == other.position.getX() and self.position.getY() == other.position.getY()
 
     def __str__(self):
         return str(self.position[0]) + ", " + str(self.position[1]) + ", " + str(self.f)
@@ -69,7 +69,8 @@ class Astar(ob.Planner):
         open_list = []
         closed_list = []
         heapq.heapify(open_list)
-        adjacent_squares = ((0, -1), (0, 1), (-1, 0), (1, 0), (-1, -1), (-1, 1), (1, -1), (1, 1))
+        adjacent_squares = ((0, -1, 3 * math.pi / 2), (0, 1, math.pi / 2), (-1, 0, math.pi), (1, 0, 0),
+                            (-1, -1, 5 * math.pi / 4), (-1, 1, 3 * math.pi / 2), (1, -1, 7 * math.pi / 4), (1, 1, math.pi / 4))
 
         # open_list.append(start_node)
         heapq.heappush(open_list, start_node)
@@ -98,8 +99,16 @@ class Astar(ob.Planner):
             children = []
             for new_position in adjacent_squares:
                 node_position = si.allocState()
-                node_position[0], node_position[1] = current_node.position[0] + new_position[0], current_node.position[
-                    1] + new_position[1]
+                # node_position = ob.State()
+                current_node_x = current_node.position.getX()
+                current_node_y = current_node.position.getY()
+                current_node_yaw = current_node.position.getYaw()
+                # node_position[0], node_position[1] = current_node.position[0] + new_position[0], current_node.position[
+                #    1] + new_position[1]
+                node_position.setXY(current_node_x + new_position[0], current_node_y + new_position[1])
+                node_position.setYaw(new_position[2])
+                # print(node_position.getX(), node_position.getY(), node_position.getYaw())
+                # node_position[0], node_position[1] = current_node_x + new_position[0], current_node_y + new_position[1]
 
                 if not si.checkMotion(current_node.position, node_position):
                     continue
