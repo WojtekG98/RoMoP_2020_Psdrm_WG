@@ -23,10 +23,6 @@ def isStateValid(state):
 def plan(space, planner, runTime, start, goal):
     ss = og.SimpleSetup(space)
     ss.setStateValidityChecker(ob.StateValidityCheckerFn(isStateValid))
-    #start = ob.State(space)
-    #start[0], start[1] = 0, 0
-    #goal = ob.State(space)
-    #goal[0], goal[1] = N, N
     ss.setStartAndGoalStates(start, goal)
     if planner == 'RRT':
         ss.setPlanner(og.RRT(ss.getSpaceInformation()))
@@ -53,17 +49,17 @@ if __name__ == '__main__':
     space.setBounds(bounds)
     # Set our robot's starting state to be random
     start = ob.State(space)
-    start[0], start[1] = 10, 10#random.randint(0, N / 2), random.randint(0, N / 2)
+    start[0], start[1] = random.randint(0, N / 2), random.randint(0, N / 2)
     while not sqrt((start[0] - center[0]) ** 2 + (start[1] - center[1]) ** 2) > radius \
-            and not \
+            or not \
             sqrt((start[0] - center2[0]) ** 2 + (start[1] - center2[1]) ** 2) > radius2:
         start[0], start[1] = random.randint(0, N / 2), random.randint(0, N / 2)
 
     # Set our robot's goal state to be random
     goal = ob.State(space)
-    goal[0], goal[1] = 90, 90 #random.randint(N / 2, N), random.randint(N / 2, N)
+    goal[0], goal[1] = random.randint(N / 2, N), random.randint(N / 2, N)
     while not sqrt((goal[0] - center[0]) ** 2 + (goal[1] - center[1]) ** 2) > radius \
-            and not \
+            or not \
             sqrt((goal[0] - center2[0]) ** 2 + (goal[1] - center2[1]) ** 2) > radius2:
         goal[0], goal[1] = random.randint(N / 2, N), random.randint(N / 2, N)
 
